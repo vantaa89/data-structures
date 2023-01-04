@@ -20,15 +20,15 @@ impl<T: Copy> Stack<T>{
         self.stack.remove(0).unwrap()
     }
 
-    pub fn is_empty(&mut self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.stack.is_empty()
     }
 
-    pub fn peek(&mut self) -> T {
+    pub fn peek(&self) -> T {
         self.stack.get(0).unwrap()
     } 
 
-    pub fn len(&mut self) -> usize {
+    pub fn len(&self) -> usize {
         self.stack.len()
     }
 }
