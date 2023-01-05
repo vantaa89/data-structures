@@ -1,53 +1,69 @@
-#[path ="../src/node.rs"] mod node;
-use std::borrow::BorrowMut;
+use std::borrow::{Borrow, BorrowMut};
+use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
+use std::cell::RefCell;
 
-use node::*;
-
-#[allow(dead_code)]
-pub struct Queue<T: Copy> {
-    tail: Option<Box<Node<T>>>,
-    size: usize,
+struct QueueNode<T: Copy> {
+    data: T,
+    next: Option<Rc<RefCell<QueueNode<T>>>>
 }
 
-#[allow(dead_code)]
+impl<T: Copy> QueueNode<T> {
+    pub fn new(data: T) -> QueueNode<T> {
+        QueueNode::<T> {data, next:None}
+    }
+}
+
+struct Queue<T: Copy> {
+    tail: Option<Rc<RefCell<QueueNode<T>>>>,
+    size: usize
+}
+
 impl<T: Copy> Queue<T> {
-    pub fn new() -> Queue::<T> {
-        Queue::<T> {tail: None, size:0}
+    pub fn new() -> Queue<T> {
+        Queue::<T>{tail: None, size: 0}
     }
 
     pub fn enqueue(&mut self, data: T) {
-        let new_node = Node::<T>{data: Some(data), next: None};
+        let mut new_node = Rc::new(RefCell::new(QueueNode::<T>::new(data)));
         match self.tail {
-            Some(_) => {
-                let mut head = self.tail.as_mut().unwrap().as_mut();
-                loop {  // inefficiency (O(n))
-                    match head.next {
-                        Some(_) => {
-                            head = head
-                            .next.as_mut()
-                            .unwrap()
-                            .as_mut();
-                        },
-                        None => break
-                    }
-                }
-                head.next = Some(Box::new(new_node));
-            },
             None => {
-                self.tail = Some(Box::new(new_node));
+                (*new_node).borrow_mut().next = Some(Rc::clone(&new_node));
+                self.size = self.size + 1;
+                self.tail = Some(new_node);
+            },
+            Some(ref tail) => {
+                (*new_node).borrow_mut().next = Some(Rc::clone(&*tail));
+                self.size = self.size + 1;
+                self.tail = Some(new_node);
             }
         }
-        self.size = self.size + 1;
     }
 
     pub fn dequeue(&mut self) -> Option<T> {
-        if let Some(_) = self.tail {
-            let mut tail = self.tail.take().unwrap();
-            self.tail = tail.next;
-            self.size = self.size - 1;    
-            tail.data
-        } else {
+        if self.is_empty() {
             None
+        } else {
+            let tail = Rc::clone(self.tail.as_ref().unwrap());
+            let front = Rc::clone(tail.deref().borrow().next.as_ref().unwrap());
+            let front_data = (*front).borrow().data;
+            if self.size == 1 {
+                self.tail = None;
+            } else {
+                (*tail).borrow_mut().next = Some(Rc::clone(&((*front).borrow().next.as_ref().unwrap())));
+            }
+            Some(front_data)
+        }
+    }
+
+    pub fn peek(&self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            let tail = Rc::clone(self.tail.as_ref().unwrap());
+            let front = Rc::clone(tail.deref().borrow().next.as_ref().unwrap());
+            let front_data = (*front).borrow().data;
+            Some(front_data)
         }
     }
 
@@ -55,11 +71,7 @@ impl<T: Copy> Queue<T> {
         self.size
     }
 
-    pub fn peek(&mut self) -> Option<T> {
-        if let Some(_) = self.tail {
-            self.tail.as_mut().unwrap().data
-        } else {
-            None
-        }
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
     }
 }
