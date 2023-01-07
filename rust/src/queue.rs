@@ -9,15 +9,16 @@ pub struct Node<T: Copy> {
 }
 
 #[allow(dead_code)]
-pub struct DLList<T: Copy> {
+pub struct Queue<T: Copy> {
     head: Option<Rc<RefCell<Node<T>>>>,
     tail: Option<Rc<RefCell<Node<T>>>>,
+    size: usize
 }
 
 #[allow(dead_code)]
-impl<T: Copy> DLList<T> {
-    pub fn new() -> DLList<T> {
-        DLList::<T>{head: None, tail: None}
+impl<T: Copy> Queue<T> {
+    pub fn new() -> Queue<T> {
+        Queue::<T>{head: None, tail: None, size: 0}
     }
 
     fn new_node(v: T) -> Rc<RefCell<Node<T>>> {
@@ -25,7 +26,7 @@ impl<T: Copy> DLList<T> {
     }
 
     pub fn push(&mut self, v:T) {
-        let n = DLList::<T>::new_node(v);
+        let n = Queue::<T>::new_node(v);
         match self.tail.take() {
             None => {
                 self.tail = Some(Rc::clone(&n));
@@ -38,12 +39,14 @@ impl<T: Copy> DLList<T> {
                 old_tail.borrow_mut().next = Some(n);
             },
         }
+        self.size = self.size + 1;
     }
 
     pub fn pop(&mut self) -> Option<T> {
         match self.head.take() {
             None => None,
             Some(head) => {
+                self.size = self.size - 1;
                 let mut temp = head.borrow_mut();
                 match temp.next.take() {
                     None => {
@@ -69,6 +72,10 @@ impl<T: Copy> DLList<T> {
             Some(_) => false
         }
     } 
+
+    pub fn len(&self) -> usize {
+        self.size
+    }
 
     pub fn peek(&self) -> Option<T> {
         match self.head {
