@@ -1,6 +1,7 @@
 mod linked_list;
 mod queue;
 mod stack;
+mod heap;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -57,26 +58,44 @@ mod tests {
     }
     #[test]
     fn queue() {
-        let mut queue = queue::DLList::<i32>::new();
+        let mut queue = queue::Queue::<i32>::new();
         let arr = [1, 3, -1, 7, 6, 10, -1, 4, 3, -1, 5, -1, -1, -1, -1, -1];
         let out = [1, 3, 7, 6, 10, 4, 3, 5];
         let mut cnt = 0;
+        let mut len = 0;
         for i in 0..16 {
             match arr[i] {
                 -1 => {
                     let a = queue.pop().unwrap();
                     assert_eq!(a, out[cnt]);
                     cnt = cnt + 1;
+                    len = len - 1;
                 },
                 _ => {
                     queue.push(arr[i]);  
+                    len = len + 1;
                 }
             }
+            assert_eq!(queue.len(), len);
         }
-        for _ in 0..5 {
-            assert_ne!(queue.is_empty(), false);
-            let a = queue.peek();
-            assert_eq!(queue.pop(), a);
+    }
+
+    #[test]
+    fn heap() {
+        let mut heap = heap::MinHeap::<i32>::new();
+        let arr = [9 ,3 ,2 ,5, 1, 6, 0, 4, 0, 0];
+        let ans = [1, 2, 3];
+        let mut cnt = 0;
+        for query in arr {
+            match query {
+                0 => {
+                    assert_eq!(heap.pop().unwrap(), ans[cnt]);
+                    cnt = cnt + 1;
+                },
+                _ => {
+                    heap.push(query);
+                }
+            }
         }
     }
 }
