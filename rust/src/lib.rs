@@ -1,7 +1,6 @@
 mod linked_list;
-mod stack;
 mod queue;
-mod ok_stack;
+mod stack;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -54,6 +53,30 @@ mod tests {
             assert_ne!(stack.len(), 0);
             let a = stack.peek();
             assert_eq!(stack.pop(), a);
+        }
+    }
+    #[test]
+    fn queue() {
+        let mut queue = queue::DLList::<i32>::new();
+        let arr = [1, 3, -1, 7, 6, 10, -1, 4, 3, -1, 5, -1, -1, -1, -1, -1];
+        let out = [1, 3, 7, 6, 10, 4, 3, 5];
+        let mut cnt = 0;
+        for i in 0..16 {
+            match arr[i] {
+                -1 => {
+                    let a = queue.pop().unwrap();
+                    assert_eq!(a, out[cnt]);
+                    cnt = cnt + 1;
+                },
+                _ => {
+                    queue.push(arr[i]);  
+                }
+            }
+        }
+        for _ in 0..5 {
+            assert_ne!(queue.is_empty(), false);
+            let a = queue.peek();
+            assert_eq!(queue.pop(), a);
         }
     }
 }

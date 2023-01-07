@@ -1,77 +1,81 @@
-use std::borrow::{Borrow, BorrowMut};
-use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::cell::RefCell;
 
-struct QueueNode<T: Copy> {
+#[allow(dead_code)]
+pub struct Node<T: Copy> {
     data: T,
-    next: Option<Rc<RefCell<QueueNode<T>>>>
+    next: Option<Rc<RefCell<Node<T>>>>,
+    prev: Option<Weak<RefCell<Node<T>>>>,
 }
 
-impl<T: Copy> QueueNode<T> {
-    pub fn new(data: T) -> QueueNode<T> {
-        QueueNode::<T> {data, next:None}
-    }
+#[allow(dead_code)]
+pub struct DLList<T: Copy> {
+    head: Option<Rc<RefCell<Node<T>>>>,
+    tail: Option<Rc<RefCell<Node<T>>>>,
 }
 
-struct Queue<T: Copy> {
-    tail: Option<Rc<RefCell<QueueNode<T>>>>,
-    size: usize
-}
-
-impl<T: Copy> Queue<T> {
-    pub fn new() -> Queue<T> {
-        Queue::<T>{tail: None, size: 0}
+#[allow(dead_code)]
+impl<T: Copy> DLList<T> {
+    pub fn new() -> DLList<T> {
+        DLList::<T>{head: None, tail: None}
     }
 
-    pub fn enqueue(&mut self, data: T) {
-        let mut new_node = Rc::new(RefCell::new(QueueNode::<T>::new(data)));
-        match self.tail {
+    fn new_node(v: T) -> Rc<RefCell<Node<T>>> {
+        Rc::new(RefCell::new(Node::<T>{data: v, next: None, prev: None}))
+    }
+
+    pub fn push(&mut self, v:T) {
+        let n = DLList::<T>::new_node(v);
+        match self.tail.take() {
             None => {
-                (*new_node).borrow_mut().next = Some(Rc::clone(&new_node));
-                self.size = self.size + 1;
-                self.tail = Some(new_node);
+                self.tail = Some(Rc::clone(&n));
+                self.head = Some(n);
             },
-            Some(ref tail) => {
-                (*new_node).borrow_mut().next = Some(Rc::clone(&*tail));
-                self.size = self.size + 1;
-                self.tail = Some(new_node);
+            Some(old_tail) => {
+                self.tail = Some(Rc::clone(&n));
+                n.borrow_mut().prev =
+                    Some(Rc::downgrade(&old_tail));
+                old_tail.borrow_mut().next = Some(n);
+            },
+        }
+    }
+
+    pub fn pop(&mut self) -> Option<T> {
+        match self.head.take() {
+            None => None,
+            Some(head) => {
+                let mut temp = head.borrow_mut();
+                match temp.next.take() {
+                    None => {
+                        let return_val = temp.data;
+                        self.head = None;
+                        self.tail = None;
+                        return Some(return_val);
+                    }
+                    Some(head_next) => {
+                        let return_val = temp.data;
+                        self.head = Some(Rc::clone(&head_next));
+                        head_next.borrow_mut().prev = None;
+                        return Some(return_val);
+                    }
+                }
             }
         }
-    }
-
-    pub fn dequeue(&mut self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let tail = Rc::clone(self.tail.as_ref().unwrap());
-            let front = Rc::clone(tail.deref().borrow().next.as_ref().unwrap());
-            let front_data = (*front).borrow().data;
-            if self.size == 1 {
-                self.tail = None;
-            } else {
-                (*tail).borrow_mut().next = Some(Rc::clone(&((*front).borrow().next.as_ref().unwrap())));
-            }
-            Some(front_data)
-        }
-    }
-
-    pub fn peek(&self) -> Option<T> {
-        if self.is_empty() {
-            None
-        } else {
-            let tail = Rc::clone(self.tail.as_ref().unwrap());
-            let front = Rc::clone(tail.deref().borrow().next.as_ref().unwrap());
-            let front_data = (*front).borrow().data;
-            Some(front_data)
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.size
     }
 
     pub fn is_empty(&self) -> bool {
-        self.size == 0
+        match self.head {
+            None => true,
+            Some(_) => false
+        }
+    } 
+
+    pub fn peek(&self) -> Option<T> {
+        match self.head {
+            None => None,
+            Some(ref head) => {
+                Some(head.as_ref().borrow().data)
+            }
+        }
     }
 }
